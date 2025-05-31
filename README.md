@@ -2,8 +2,9 @@
 
 A Neovim plugin for seamless integration with Claude CLI.
 
-## Prerequisites
+<img width="1800" alt="Capture d’écran 2025-05-31 à 21 45 00" src="https://github.com/user-attachments/assets/ce5566a5-37ad-4639-918c-567dcae5d740" />
 
+## Prerequisites
 - Neovim >= 0.5.0
 - Claude CLI installed (`brew install anthropic/tools/claude`)
 
