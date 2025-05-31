@@ -1,81 +1,77 @@
-# Claude.nvim
+# Claude.nvim 🤖
 
-A Neovim plugin for seamless integration with Claude CLI.
+A minimalist Neovim plugin for seamless integration with Anthropic's Claude CLI.
 
-<img width="1800" alt="Capture d’écran 2025-05-31 à 21 45 00" src="https://github.com/user-attachments/assets/ce5566a5-37ad-4639-918c-567dcae5d740" />
+## Features
+
+- 🚀 Three ways to open Claude:
+  - Horizontal split (`<leader>CC` or `:Claude`)
+  - Floating window (`<leader>CF` or `:ClaudeFloat`)
+  - Right split (`<leader>CR` or `:ClaudeRight`)
+- 💡 Send text selections directly to Claude
+- 📝 Command history support
+- 🎨 Customizable UI with floating window options
 
 ## Prerequisites
-- Neovim >= 0.5.0
-- Claude CLI installed (`brew install anthropic/tools/claude`)
+
+- Neovim >= 0.8.0
+- [Claude CLI](https://github.com/anthropics/claude-cli) installed and configured
 
 ## Installation
 
-Using [lazy.nvim](https://github.com/folke/lazy.nvim):
+### Using [lazy.nvim](https://github.com/folke/lazy.nvim)
+
+Add to your plugin specifications in `lua/plugins/claude.lua`:
 
 ```lua
-{
-    "h4ckm1n/claude-nvim",
-    config = function()
-        require("claude").setup({
-            claude_path = "/opt/homebrew/bin/claude", -- Path to Claude CLI
-            keymaps = {
-                execute = "<leader>CC",      -- Open in horizontal split
-                execute_float = "<leader>CF", -- Open in floating window
-                execute_right = "<leader>CR", -- Open in right split
-            },
-            float = {
-                width = 0.8,    -- 80% of screen width
-                height = 0.8,   -- 80% of screen height
-                border = "rounded",
-            },
-        })
-    end,
+return {
+  "h4ckm1n-dev/claude-nvim",
+  event = "VeryLazy",
+  config = function()
+    require("claude").setup({
+      -- Optional: override default configuration
+      keymaps = {
+        execute = "<leader>CC",
+        execute_float = "<leader>CF",
+        execute_right = "<leader>CR",
+        send_selection = "<leader>CS",
+        execute_with_line = "<leader>CL",
+      },
+    })
+  end,
 }
 ```
 
-## Usage
-
-The plugin provides three ways to interact with Claude:
-
-1. Horizontal Split (default):
-   - Use `<leader>CC` or `:Claude`
-   - Opens Claude in a horizontal split below current window
-
-2. Floating Window:
-   - Use `<leader>CF` or `:ClaudeFloat`
-   - Opens Claude in a centered floating window
-   - Window size and border style are customizable
-
-3. Right Split:
-   - Use `<leader>CR` or `:ClaudeRight`
-   - Opens Claude in a vertical split on the right
-   - Fixed width of 80 columns
-
-## Configuration
-
-You can customize the plugin behavior through the setup function:
+## Default Configuration
 
 ```lua
-require("claude").setup({
-    -- Path to Claude CLI executable
-    claude_path = "/opt/homebrew/bin/claude",
-
-    -- Keymaps
-    keymaps = {
-        execute = "<leader>CC",      -- Horizontal split
-        execute_float = "<leader>CF", -- Floating window
-        execute_right = "<leader>CR", -- Right split
-    },
-
-    -- Floating window settings
-    float = {
-        width = 0.8,    -- Percentage of screen width
-        height = 0.8,   -- Percentage of screen height
-        border = "rounded", -- Border style: "none", "single", "double", "rounded", "solid", "shadow"
-    },
-})
+{
+  keymaps = {
+    execute = "<leader>CC",        -- Open in horizontal split
+    execute_float = "<leader>CF",  -- Open in floating window
+    execute_right = "<leader>CR",  -- Open in right split
+    send_selection = "<leader>CS", -- Send selection to Claude
+    execute_with_line = "<leader>CL", -- Execute with current line
+  },
+  float = {
+    width = 0.8,      -- 80% of screen width
+    height = 0.8,     -- 80% of screen height
+    border = "rounded",
+    title = " Claude AI ",
+    winblend = 0,
+    title_pos = "center",
+  },
+  history = {
+    enabled = true,
+    save_path = vim.fn.stdpath("data") .. "/claude_history",
+    max_entries = 100,
+  },
+}
 ```
 
 ## License
 
 MIT
+
+---
+Made with ❤️ by [h4ckm1n](https://github.com/h4ckm1n-dev)
