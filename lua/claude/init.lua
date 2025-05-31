@@ -54,6 +54,37 @@ M.config = {
 
 local config = M.config
 
+-- Handle terminal exit
+local function handle_terminal_exit(win, buf, mode)
+  return function()
+    -- Save window position and size for restoration if needed
+    local win_config = win and vim.api.nvim_win_get_config(win) or nil
+
+    -- Clean up the buffer
+    if buf and vim.api.nvim_buf_is_valid(buf) then
+      vim.api.nvim_buf_delete(buf, { force = true })
+    end
+
+    -- Clean up the window
+    if win and vim.api.nvim_win_is_valid(win) then
+      vim.api.nvim_win_close(win, true)
+    end
+
+    -- Show exit message
+    vim.schedule(function()
+      vim.notify(
+        string.format("Claude AI (%s) session ended", mode),
+        vim.log.levels.INFO,
+        {
+          title = "Claude.nvim",
+          icon = "🤖",
+          timeout = 3000
+        }
+      )
+    end)
+  end
+end
+
 -- Execute Claude in a floating window
 local function execute_claude_float()
   -- Calculate window size
@@ -85,13 +116,9 @@ local function execute_claude_float()
   vim.api.nvim_win_set_option(win, "winblend", config.float.winblend)
   vim.api.nvim_win_set_option(win, "cursorline", true)
 
-  -- Start terminal
+  -- Start terminal with exit handler
   vim.fn.termopen(config.claude_path, {
-    on_exit = function()
-      if vim.api.nvim_win_is_valid(win) then
-        vim.api.nvim_win_close(win, true)
-      end
-    end
+    on_exit = handle_terminal_exit(win, buf, "float")
   })
 
   -- Enter terminal mode
@@ -108,11 +135,16 @@ local function execute_claude_right()
   vim.cmd('vertical resize ' .. width)
 
   -- Create terminal buffer
-  vim.cmd('terminal ' .. config.claude_path)
+  local buf = vim.api.nvim_get_current_buf()
+  local win = vim.api.nvim_get_current_win()
 
   -- Set buffer options
-  local buf = vim.api.nvim_get_current_buf()
   vim.api.nvim_buf_set_option(buf, "buftype", "terminal")
+
+  -- Start terminal with exit handler
+  vim.fn.termopen(config.claude_path, {
+    on_exit = handle_terminal_exit(win, buf, "right split")
+  })
 
   -- Enter terminal mode
   vim.cmd('startinsert')
@@ -124,11 +156,16 @@ local function execute_claude_split()
   vim.cmd('split')
 
   -- Create terminal buffer
-  vim.cmd('terminal ' .. config.claude_path)
+  local buf = vim.api.nvim_get_current_buf()
+  local win = vim.api.nvim_get_current_win()
 
   -- Set buffer options
-  local buf = vim.api.nvim_get_current_buf()
   vim.api.nvim_buf_set_option(buf, "buftype", "terminal")
+
+  -- Start terminal with exit handler
+  vim.fn.termopen(config.claude_path, {
+    on_exit = handle_terminal_exit(win, buf, "horizontal split")
+  })
 
   -- Enter terminal mode
   vim.cmd('startinsert')
