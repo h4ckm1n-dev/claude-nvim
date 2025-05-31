@@ -1,21 +1,58 @@
 local M = {}
 
 -- Default configuration
-local default_config = {
+M.config = {
   claude_path = "/opt/homebrew/bin/claude",
   keymaps = {
     execute = "<leader>CC",
     execute_float = "<leader>CF",
     execute_right = "<leader>CR",
+    send_selection = "<leader>CS",
+    execute_with_line = "<leader>CL",
+    send_buffer = "<leader>CB",   -- New: send entire buffer
+    send_git_diff = "<leader>CD", -- New: send git diff
+    copy_response = "<leader>CY", -- New: copy response
+    debug = "<leader>CD",         -- New: run debug mode
   },
   float = {
     width = 0.8,  -- Percentage of screen width
     height = 0.8, -- Percentage of screen height
     border = "rounded",
+    title = " Claude AI ",
+    winblend = 0,
+    title_pos = "center",
+  },
+  history = {
+    enabled = true,
+    save_path = vim.fn.stdpath("data") .. "/claude_history",
+    max_entries = 100,
+    per_project = true, -- New: save history per project
+  },
+  ui = {
+    syntax_highlight = true, -- New: syntax highlighting in responses
+    markdown_render = true,  -- New: markdown rendering
+    status_line = true,      -- New: status line integration
+    theme = {                -- New: theme configuration
+      inherit = true,        -- Inherit from Neovim colorscheme
+      response_bg = nil,     -- Custom response background
+      code_bg = nil,         -- Custom code block background
+    },
+  },
+  context = {                -- New: context configuration
+    include_buffer = false,  -- Include current buffer
+    include_git = false,     -- Include git context
+    include_lsp = false,     -- Include LSP diagnostics
+    max_context_lines = 100, -- Max lines of context
+  },
+  templates = {              -- New: prompt templates
+    code_review = "Please review this code:\n",
+    explain = "Please explain this code:\n",
+    refactor = "Please suggest refactoring for:\n",
+    document = "Please document this code:\n",
   },
 }
 
-local config = default_config
+local config = M.config
 
 -- Execute Claude in a floating window
 local function execute_claude_float()
@@ -37,15 +74,15 @@ local function execute_claude_float()
     col = col,
     style = "minimal",
     border = config.float.border,
-    title = " Claude AI ",
-    title_pos = "center",
+    title = config.float.title,
+    title_pos = config.float.title_pos,
   }
 
   -- Create window
   local win = vim.api.nvim_open_win(buf, true, opts)
 
   -- Set window options
-  vim.api.nvim_win_set_option(win, "winblend", 0)
+  vim.api.nvim_win_set_option(win, "winblend", config.float.winblend)
   vim.api.nvim_win_set_option(win, "cursorline", true)
 
   -- Start terminal
@@ -101,6 +138,9 @@ local function create_commands()
   vim.api.nvim_create_user_command('Claude', execute_claude_split, {})
   vim.api.nvim_create_user_command('ClaudeFloat', execute_claude_float, {})
   vim.api.nvim_create_user_command('ClaudeRight', execute_claude_right, {})
+  vim.api.nvim_create_user_command('ClaudeDebug', function()
+    require('claude.utils.debug').run_debug(config)
+  end, {})
 end
 
 -- Initialize the plugin
@@ -109,7 +149,7 @@ function M.setup(user_config)
   vim.notify("Setting up Claude plugin...")
 
   -- Update config
-  config = vim.tbl_deep_extend("force", default_config, user_config or {})
+  config = vim.tbl_deep_extend("force", M.config, user_config or {})
 
   -- Set up keymaps
   vim.keymap.set("n", config.keymaps.execute, execute_claude_split, {
@@ -128,6 +168,14 @@ function M.setup(user_config)
     noremap = true,
     silent = true,
     desc = "Execute Claude in right split"
+  })
+
+  vim.keymap.set("n", config.keymaps.debug, function()
+    require('claude.utils.debug').run_debug(config)
+  end, {
+    noremap = true,
+    silent = true,
+    desc = "Run Claude debug mode"
   })
 
   -- Create commands
