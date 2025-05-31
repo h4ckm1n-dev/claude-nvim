@@ -24,17 +24,47 @@ function M.highlight_code(bufnr, text)
   for _, block in ipairs(blocks) do
     -- Create a temporary buffer for highlighting
     local temp_bufnr = vim.api.nvim_create_buf(false, true)
-    vim.api.nvim_buf_set_option(temp_bufnr, 'filetype', block.lang)
-    vim.api.nvim_buf_set_lines(temp_bufnr, 0, -1, false, vim.split(block.code, "\n"))
 
-    -- Copy highlighting
-    local highlights = vim.api.nvim_buf_get_extmarks(temp_bufnr, -1, 0, -1, { details = true })
-    for _, hl in ipairs(highlights) do
-      vim.api.nvim_buf_add_highlight(bufnr, -1, hl[4].hl_group, hl[2], hl[3], hl[3] + hl[4].end_col)
+    -- Set buffer options safely
+    pcall(vim.api.nvim_buf_set_option, temp_bufnr, 'buftype', 'nofile')
+    pcall(vim.api.nvim_buf_set_option, temp_bufnr, 'bufhidden', 'wipe')
+
+    -- Set filetype if language is specified
+    if block.lang and block.lang ~= "text" then
+      pcall(vim.api.nvim_buf_set_option, temp_bufnr, 'filetype', block.lang)
+    end
+
+    -- Split code into lines and remove empty lines at start/end
+    local code_lines = vim.split(block.code, "\n")
+    while code_lines[1] and code_lines[1]:match("^%s*$") do
+      table.remove(code_lines, 1)
+    end
+    while code_lines[#code_lines] and code_lines[#code_lines]:match("^%s*$") do
+      table.remove(code_lines)
+    end
+
+    -- Set lines safely
+    if #code_lines > 0 then
+      pcall(vim.api.nvim_buf_set_lines, temp_bufnr, 0, -1, false, code_lines)
+
+      -- Get highlighting
+      local ns_id = vim.api.nvim_create_namespace('claude_highlight')
+      vim.api.nvim_buf_set_option(temp_bufnr, 'syntax', block.lang)
+
+      -- Wait for syntax to be applied
+      vim.cmd('redraw')
+
+      -- Copy highlighting safely
+      for i, line in ipairs(code_lines) do
+        local highlights = vim.api.nvim_buf_get_extmarks(temp_bufnr, -1, i - 1, i, { details = true })
+        for _, hl in ipairs(highlights) do
+          pcall(vim.api.nvim_buf_add_highlight, bufnr, ns_id, hl[4].hl_group, i - 1, hl[3], hl[3] + hl[4].end_col)
+        end
+      end
     end
 
     -- Clean up
-    vim.api.nvim_buf_delete(temp_bufnr, { force = true })
+    pcall(vim.api.nvim_buf_delete, temp_bufnr, { force = true })
   end
 end
 

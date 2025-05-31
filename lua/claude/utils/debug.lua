@@ -68,12 +68,16 @@ end
 local function test_system(buf)
   log(buf, '=== Testing System Requirements ===', 'INFO', 'system')
 
+  local all_passed = true
+
   -- Check Neovim version
   local nvim_version = vim.version()
   if nvim_version.major >= 0 and nvim_version.minor >= 8 then
-    log(buf, '  Neovim version OK: ' .. vim.version().major .. '.' .. vim.version().minor, 'INFO', 'system')
+    log(buf, string.format('  Neovim version OK: %d.%d', nvim_version.major, nvim_version.minor), 'INFO', 'system')
   else
-    log(buf, '  Neovim version below recommended (0.8.0)', 'WARN', 'system')
+    all_passed = false
+    log(buf, string.format('  Neovim version below recommended (0.8.0): %d.%d', nvim_version.major, nvim_version.minor),
+      'WARN', 'system')
   end
 
   -- Check Claude CLI
@@ -81,6 +85,7 @@ local function test_system(buf)
   if claude_exists == 1 then
     log(buf, '  Claude CLI found', 'INFO', 'system')
   else
+    all_passed = false
     log(buf, '  Claude CLI not found in PATH', 'ERROR', 'system')
   end
 
@@ -90,8 +95,14 @@ local function test_system(buf)
     if vim.fn.exists('*' .. feature) == 1 then
       log(buf, string.format('  Required feature available: %s', feature), 'INFO', 'system')
     else
+      all_passed = false
       log(buf, string.format('  Missing required feature: %s', feature), 'ERROR', 'system')
     end
+  end
+
+  -- Set final status
+  if all_passed then
+    debug_results.system.status = 'success'
   end
 end
 
