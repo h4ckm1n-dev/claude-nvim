@@ -15,8 +15,8 @@ M.config = {
     debug = "<leader>CT",             -- Debug mode
   },
   float = {
-    width = 0.8,  -- Percentage of screen width
-    height = 0.8, -- Percentage of screen height
+    width = 0.35, -- 35% of screen width
+    height = 0.8, -- 80% of screen height
     border = "rounded",
     title = " Claude AI ",
     winblend = 0,
@@ -103,8 +103,9 @@ local function execute_claude_right()
   -- Create right split
   vim.cmd('botright vsplit')
 
-  -- Set width to 80 columns
-  vim.cmd('vertical resize 80')
+  -- Set width to 35% of screen width
+  local width = math.floor(vim.o.columns * 0.35)
+  vim.cmd('vertical resize ' .. width)
 
   -- Create terminal buffer
   vim.cmd('terminal ' .. config.claude_path)
