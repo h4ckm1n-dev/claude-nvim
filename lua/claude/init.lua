@@ -4,15 +4,15 @@ local M = {}
 M.config = {
   claude_path = "/opt/homebrew/bin/claude",
   keymaps = {
-    execute = "<leader>CC",
-    execute_float = "<leader>CF",
-    execute_right = "<leader>CR",
-    send_selection = "<leader>CS",
-    execute_with_line = "<leader>CL",
-    send_buffer = "<leader>CB",   -- New: send entire buffer
-    send_git_diff = "<leader>CG", -- Changed from CD to CG for git diff
-    copy_response = "<leader>CY", -- New: copy response
-    debug = "<leader>CT",         -- Debug mode
+    execute = "<leader>CC",           -- Execute in split
+    execute_float = "<leader>CF",     -- Execute in float
+    execute_right = "<leader>CR",     -- Execute in right split
+    send_selection = "<leader>CS",    -- Send selection
+    execute_with_line = "<leader>CL", -- Execute with line
+    send_buffer = "<leader>CB",       -- Send buffer
+    send_git_diff = "<leader>CG",     -- Send git diff
+    copy_response = "<leader>CY",     -- Copy response
+    debug = "<leader>CT",             -- Debug mode
   },
   float = {
     width = 0.8,  -- Percentage of screen width
@@ -148,35 +148,43 @@ function M.setup(user_config)
   -- Print debug info
   vim.notify("Setting up Claude plugin...")
 
-  -- Update config
+  -- Update config with user settings
   config = vim.tbl_deep_extend("force", M.config, user_config or {})
 
+  -- Validate keymaps for conflicts
+  local used_keys = {}
+  for action, key in pairs(config.keymaps) do
+    if used_keys[key] then
+      vim.notify(string.format(
+        "Claude.nvim: Keymap conflict detected! %s and %s both use %s",
+        used_keys[key], action, key
+      ), vim.log.levels.WARN)
+    end
+    used_keys[key] = action
+  end
+
   -- Set up keymaps
-  vim.keymap.set("n", config.keymaps.execute, execute_claude_split, {
-    noremap = true,
-    silent = true,
-    desc = "Execute Claude in split"
-  })
+  for action, key in pairs(config.keymaps) do
+    local cmd
+    if action == "execute" then
+      cmd = execute_claude_split
+    elseif action == "execute_float" then
+      cmd = execute_claude_float
+    elseif action == "execute_right" then
+      cmd = execute_claude_right
+    elseif action == "debug" then
+      cmd = function() require('claude.utils.debug').run_debug(config) end
+      -- Add other actions as needed
+    end
 
-  vim.keymap.set("n", config.keymaps.execute_float, execute_claude_float, {
-    noremap = true,
-    silent = true,
-    desc = "Execute Claude in floating window"
-  })
-
-  vim.keymap.set("n", config.keymaps.execute_right, execute_claude_right, {
-    noremap = true,
-    silent = true,
-    desc = "Execute Claude in right split"
-  })
-
-  vim.keymap.set("n", config.keymaps.debug, function()
-    require('claude.utils.debug').run_debug(config)
-  end, {
-    noremap = true,
-    silent = true,
-    desc = "Run Claude debug mode"
-  })
+    if cmd then
+      vim.keymap.set("n", key, cmd, {
+        noremap = true,
+        silent = true,
+        desc = "Claude: " .. action
+      })
+    end
+  end
 
   -- Create commands
   create_commands()

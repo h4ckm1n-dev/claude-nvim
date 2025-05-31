@@ -155,45 +155,78 @@ local function test_render(buf)
 
   -- Create a test buffer
   local test_buf = vim.api.nvim_create_buf(false, true)
+  vim.api.nvim_buf_set_option(test_buf, 'buftype', 'nofile')
 
-  -- Test code highlighting
+  -- Test code highlighting with proper test content
   local test_code = [[
+Some regular text before the code block.
+
 ```lua
 local function test()
-  return "hello"
+  print("Hello, World!")
+  return true
 end
 ```
-]]
+
+Some text between code blocks.
+
+```python
+def example():
+    print("Python code")
+    return None
+```
+
+Final text.]]
+
   log(buf, 'Testing Code Highlighting:', 'INFO', 'render')
   local success, err = pcall(function()
+    -- First ensure the test buffer has content
+    vim.api.nvim_buf_set_lines(test_buf, 0, -1, false, vim.split(test_code, "\n"))
+
+    -- Then apply highlighting
     render.highlight_code(test_buf, test_code)
     log(buf, '  Code highlighting successful', 'INFO', 'render')
   end)
+
   if not success then
     log(buf, string.format('  Code highlighting failed: %s', err), 'ERROR', 'render')
+    -- Try to get more detailed error information
+    local detailed_err = debug.traceback(err, 2)
+    log(buf, string.format('  Detailed error: %s', detailed_err), 'ERROR', 'render')
   end
 
-  -- Test markdown rendering
+  -- Test markdown rendering with proper test content
   local test_markdown = [[
 # Title
 ## Subtitle
 **Bold text**
 _Italic text_
-`code`
-- List item
-]]
+`inline code`
+- List item 1
+- List item 2
+
+Regular paragraph text.]]
+
   log(buf, 'Testing Markdown Rendering:', 'INFO', 'render')
   success, err = pcall(function()
+    -- Clear the buffer first
+    vim.api.nvim_buf_set_lines(test_buf, 0, -1, false, vim.split(test_markdown, "\n"))
+
+    -- Apply markdown rendering
     render.render_markdown(test_buf, test_markdown)
     log(buf, '  Markdown rendering successful', 'INFO', 'render')
   end)
+
   if not success then
     log(buf, string.format('  Markdown rendering failed: %s', err), 'ERROR', 'render')
+    local detailed_err = debug.traceback(err, 2)
+    log(buf, string.format('  Detailed error: %s', detailed_err), 'ERROR', 'render')
   end
 
-  -- Clean up test buffer
-  vim.api.nvim_buf_delete(test_buf, { force = true })
+  -- Clean up
+  pcall(vim.api.nvim_buf_delete, test_buf, { force = true })
 
+  -- Set final status
   if debug_results.render.status == 'pending' then
     debug_results.render.status = 'success'
   end
