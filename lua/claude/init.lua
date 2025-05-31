@@ -10,9 +10,9 @@ M.config = {
     send_selection = "<leader>CS",
     execute_with_line = "<leader>CL",
     send_buffer = "<leader>CB",   -- New: send entire buffer
-    send_git_diff = "<leader>CD", -- New: send git diff
+    send_git_diff = "<leader>CG", -- Changed from CD to CG for git diff
     copy_response = "<leader>CY", -- New: copy response
-    debug = "<leader>CT",         -- Changed from CD to CT for debug
+    debug = "<leader>CT",         -- Debug mode
   },
   float = {
     width = 0.8,  -- Percentage of screen width

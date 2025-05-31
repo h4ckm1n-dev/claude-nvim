@@ -5,13 +5,23 @@ local function detect_code_blocks(text)
   local blocks = {}
   local current_pos = 1
 
-  for start_pos, lang, code, end_pos in text:gmatch("```(%w*)\n(.-)\n```") do
+  -- Ensure text is a string
+  if type(text) ~= "string" then
+    return blocks
+  end
+
+  -- Match code blocks with proper error handling
+  local pattern = "```(%w*)\n(.-)\n```"
+  local start_pos, end_pos, lang, code = text:find(pattern)
+
+  while start_pos do
     table.insert(blocks, {
       start = start_pos,
-      lang = lang ~= "" and lang or "text",
-      code = code,
+      lang = (lang and lang ~= "") and lang or "text",
+      code = code or "",
       finish = end_pos
     })
+    start_pos, end_pos, lang, code = text:find(pattern, end_pos + 1)
   end
 
   return blocks
@@ -19,57 +29,85 @@ end
 
 -- Apply syntax highlighting to code blocks
 function M.highlight_code(bufnr, text)
-  local blocks = detect_code_blocks(text)
+  -- Validate input
+  if type(bufnr) ~= "number" or type(text) ~= "string" then
+    return
+  end
 
+  -- Create namespace
+  local ns_id = vim.api.nvim_create_namespace('claude_highlight')
+
+  local blocks = detect_code_blocks(text)
   for _, block in ipairs(blocks) do
+    -- Skip empty blocks
+    if not block.code or block.code == "" then
+      goto continue
+    end
+
     -- Create a temporary buffer for highlighting
-    local temp_bufnr = vim.api.nvim_create_buf(false, true)
+    local ok, temp_bufnr = pcall(vim.api.nvim_create_buf, false, true)
+    if not ok then
+      goto continue
+    end
 
     -- Set buffer options safely
     pcall(vim.api.nvim_buf_set_option, temp_bufnr, 'buftype', 'nofile')
     pcall(vim.api.nvim_buf_set_option, temp_bufnr, 'bufhidden', 'wipe')
 
-    -- Set filetype if language is specified
-    if block.lang and block.lang ~= "text" then
-      pcall(vim.api.nvim_buf_set_option, temp_bufnr, 'filetype', block.lang)
-    end
-
-    -- Split code into lines and remove empty lines at start/end
+    -- Split code into lines and clean them
     local code_lines = vim.split(block.code, "\n")
-    while code_lines[1] and code_lines[1]:match("^%s*$") do
-      table.remove(code_lines, 1)
+    local clean_lines = {}
+    for _, line in ipairs(code_lines) do
+      if line and not line:match("^%s*$") then
+        table.insert(clean_lines, line)
+      end
     end
-    while code_lines[#code_lines] and code_lines[#code_lines]:match("^%s*$") do
-      table.remove(code_lines)
+
+    -- Skip if no valid lines
+    if #clean_lines == 0 then
+      pcall(vim.api.nvim_buf_delete, temp_bufnr, { force = true })
+      goto continue
     end
 
-    -- Set lines safely
-    if #code_lines > 0 then
-      pcall(vim.api.nvim_buf_set_lines, temp_bufnr, 0, -1, false, code_lines)
+    -- Set lines and syntax
+    ok = pcall(vim.api.nvim_buf_set_lines, temp_bufnr, 0, -1, false, clean_lines)
+    if not ok then
+      pcall(vim.api.nvim_buf_delete, temp_bufnr, { force = true })
+      goto continue
+    end
 
-      -- Get highlighting
-      local ns_id = vim.api.nvim_create_namespace('claude_highlight')
-      vim.api.nvim_buf_set_option(temp_bufnr, 'syntax', block.lang)
-
-      -- Wait for syntax to be applied
+    -- Set syntax if language is specified
+    if block.lang and block.lang ~= "text" then
+      pcall(vim.api.nvim_buf_set_option, temp_bufnr, 'syntax', block.lang)
       vim.cmd('redraw')
+    end
 
-      -- Copy highlighting safely
-      for i, line in ipairs(code_lines) do
-        local highlights = vim.api.nvim_buf_get_extmarks(temp_bufnr, -1, i - 1, i, { details = true })
+    -- Copy highlighting safely
+    for i, line in ipairs(clean_lines) do
+      local ok, highlights = pcall(vim.api.nvim_buf_get_extmarks, temp_bufnr, -1, i - 1, i, { details = true })
+      if ok then
         for _, hl in ipairs(highlights) do
-          pcall(vim.api.nvim_buf_add_highlight, bufnr, ns_id, hl[4].hl_group, i - 1, hl[3], hl[3] + hl[4].end_col)
+          if hl[4] and hl[4].hl_group then
+            pcall(vim.api.nvim_buf_add_highlight, bufnr, ns_id, hl[4].hl_group, i - 1, 0, #line)
+          end
         end
       end
     end
 
     -- Clean up
     pcall(vim.api.nvim_buf_delete, temp_bufnr, { force = true })
+
+    ::continue::
   end
 end
 
 -- Simple markdown rendering
 function M.render_markdown(bufnr, text)
+  -- Validate input
+  if type(bufnr) ~= "number" or type(text) ~= "string" then
+    return
+  end
+
   -- Basic markdown syntax
   local markdown_syntax = {
     { pattern = "^#%s+(.-)$",   hl_group = "Title" },
@@ -83,9 +121,11 @@ function M.render_markdown(bufnr, text)
 
   local lines = vim.split(text, "\n")
   for i, line in ipairs(lines) do
-    for _, syntax in ipairs(markdown_syntax) do
-      for match in line:gmatch(syntax.pattern) do
-        vim.api.nvim_buf_add_highlight(bufnr, -1, syntax.hl_group, i - 1, 0, -1)
+    if type(line) == "string" then
+      for _, syntax in ipairs(markdown_syntax) do
+        for match in line:gmatch(syntax.pattern) do
+          pcall(vim.api.nvim_buf_add_highlight, bufnr, -1, syntax.hl_group, i - 1, 0, #line)
+        end
       end
     end
   end
@@ -93,6 +133,11 @@ end
 
 -- Apply all rendering based on configuration
 function M.render_response(bufnr, text, config)
+  -- Validate input
+  if type(bufnr) ~= "number" or type(text) ~= "string" or type(config) ~= "table" then
+    return
+  end
+
   if config.ui.syntax_highlight then
     M.highlight_code(bufnr, text)
   end
