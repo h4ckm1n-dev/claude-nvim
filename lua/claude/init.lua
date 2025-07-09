@@ -308,6 +308,7 @@ local function execute_claude_float()
   logger.debug("Terminal started", { job_id = job_id })
 
   -- Set up quick actions
+  local buf = vim.api.nvim_get_current_buf()
   setup_claude_keymaps(buf)
 
   -- Auto-send context if available
@@ -345,7 +346,6 @@ local function execute_claude_right()
   local win = vim.api.nvim_get_current_win()
 
   -- Set buffer options
-  vim.bo[buf].buftype = "terminal"
 
   -- Build smart context
   local context_text, info_text = build_smart_context()
@@ -353,12 +353,13 @@ local function execute_claude_right()
 
   -- Start terminal with filtered output and exit handler
   vim.fn.termopen(config.claude_path .. ' 2>/dev/null', {
-    on_exit = handle_terminal_exit(win, buf, "right split"),
+    on_exit = handle_terminal_exit(win, vim.api.nvim_get_current_buf(), "right split"),
     on_stderr = filter_claude_output,
     stderr_buffered = false,
   })
 
   -- Set up quick actions
+  local buf = vim.api.nvim_get_current_buf()
   setup_claude_keymaps(buf)
 
   -- Auto-send context if available
@@ -387,7 +388,6 @@ local function execute_claude_split()
   local win = vim.api.nvim_get_current_win()
 
   -- Set buffer options
-  vim.bo[buf].buftype = "terminal"
 
   -- Build smart context
   local context_text, info_text = build_smart_context()
@@ -395,12 +395,13 @@ local function execute_claude_split()
 
   -- Start terminal with filtered output and exit handler
   vim.fn.termopen(config.claude_path .. ' 2>/dev/null', {
-    on_exit = handle_terminal_exit(win, buf, "horizontal split"),
+    on_exit = handle_terminal_exit(win, vim.api.nvim_get_current_buf(), "horizontal split"),
     on_stderr = filter_claude_output,
     stderr_buffered = false,
   })
 
   -- Set up quick actions
+  local buf = vim.api.nvim_get_current_buf()
   setup_claude_keymaps(buf)
 
   -- Auto-send context if available
