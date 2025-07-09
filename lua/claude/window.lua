@@ -1,7 +1,22 @@
 local M = {}
 local api = vim.api
 local fn = vim.fn
-local config = require("claude").get_config()
+local function get_config()
+  local ok, claude = pcall(require, "claude")
+  if ok and claude.get_config then
+    return claude.get_config()
+  end
+  -- Default config fallback
+  return {
+    window = {
+      width = 0.8,
+      height = 0.8,
+      border = "rounded"
+    }
+  }
+end
+
+local config = get_config()
 
 -- Store window and buffer information
 local state = {
@@ -17,13 +32,13 @@ local state = {
 -- Create a new buffer
 local function create_buffer(name, filetype)
   local buf = api.nvim_create_buf(false, true)
-  api.nvim_buf_set_option(buf, "buftype", "nofile")
-  api.nvim_buf_set_option(buf, "bufhidden", "hide")
-  api.nvim_buf_set_option(buf, "swapfile", false)
-  api.nvim_buf_set_option(buf, "filetype", filetype or "claude")
-  api.nvim_buf_set_option(buf, "modifiable", true)
+  vim.bo[buf].buftype = "nofile"
+  vim.bo[buf].bufhidden = "hide"
+  vim.bo[buf].swapfile = false
+  vim.bo[buf].filetype = filetype or "claude"
+  vim.bo[buf].modifiable = true
   -- Allow normal mode mappings
-  api.nvim_buf_set_option(buf, "modifiable", true)
+  vim.bo[buf].modifiable = true
   api.nvim_buf_set_name(buf, name)
   return buf
 end
@@ -66,6 +81,7 @@ end
 
 -- Create the floating windows
 local function create_windows()
+  config = get_config() -- Refresh config
   local total_width = math.floor(vim.o.columns * config.window.width)
   local total_height = math.floor(vim.o.lines * config.window.height)
   local row = math.floor((vim.o.lines - total_height) / 2)
@@ -121,15 +137,17 @@ local function create_windows()
   state.response_win = api.nvim_open_win(state.response_buf, false, response_opts)
   state.prompt_win = api.nvim_open_win(state.prompt_buf, true, prompt_opts)
 
-  -- Set window-local options
+  -- Set window-local options with error handling
   for _, win in ipairs({ state.prompt_win, state.response_win }) do
-    api.nvim_win_set_option(win, "wrap", true)
-    api.nvim_win_set_option(win, "cursorline", true)
-    api.nvim_win_set_option(win, "winhl", "Normal:Normal,FloatBorder:FloatBorder")
+    if api.nvim_win_is_valid(win) then
+      pcall(api.nvim_win_set_option, win, "wrap", true)
+      pcall(api.nvim_win_set_option, win, "cursorline", true)
+      pcall(api.nvim_win_set_option, win, "winhl", "Normal:Normal,FloatBorder:FloatBorder")
+    end
   end
 
   -- Make prompt buffer modifiable
-  api.nvim_buf_set_option(state.prompt_buf, "modifiable", true)
+  vim.bo[state.prompt_buf].modifiable = true
 
   -- Set up buffer keymaps
   setup_buffer_keymaps(state.prompt_buf)
@@ -156,7 +174,7 @@ local function create_windows()
     group = group,
     buffer = state.prompt_buf,
     callback = function()
-      api.nvim_buf_set_option(state.prompt_buf, "modifiable", true)
+      vim.bo[state.prompt_buf].modifiable = true
       vim.cmd('startinsert')
     end
   })

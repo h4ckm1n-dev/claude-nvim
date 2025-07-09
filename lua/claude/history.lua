@@ -1,6 +1,23 @@
 local M = {}
-local config = require("claude").get_config()
-local state = require("claude").get_state()
+
+local function get_config()
+  local ok, claude = pcall(require, "claude")
+  if ok and claude.get_config then
+    return claude.get_config()
+  end
+  return { history = { enabled = false, max_entries = 100 } }
+end
+
+local function get_state()
+  local ok, claude = pcall(require, "claude")
+  if ok and claude.get_state then
+    return claude.get_state()
+  end
+  return { history = {}, history_index = 0 }
+end
+
+local config = get_config()
+local state = get_state()
 
 -- Initialize history
 function M.init(save_path)
@@ -17,16 +34,20 @@ end
 
 -- Save history
 function M.save()
-  if not config.history.save_path then return end
+  local current_config = get_config()
+  if not current_config.history.save_path then return end
 
+  local current_state = get_state()
   -- Trim history to max entries
-  while #state.history > config.history.max_entries do
-    table.remove(state.history, 1)
+  while #current_state.history > current_config.history.max_entries do
+    table.remove(current_state.history, 1)
   end
 
-  -- Save to file
-  local content = vim.fn.json_encode(state.history)
-  vim.fn.writefile({ content }, config.history.save_path)
+  -- Save to file with error handling
+  local ok, content = pcall(vim.fn.json_encode, current_state.history)
+  if ok then
+    pcall(vim.fn.writefile, { content }, current_config.history.save_path)
+  end
 end
 
 -- Add entry to history
@@ -85,8 +106,8 @@ function M.show()
   end
 
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
-  vim.api.nvim_buf_set_option(buf, "modifiable", false)
-  vim.api.nvim_buf_set_option(buf, "filetype", "claude-history")
+  vim.bo[buf].modifiable = false
+  vim.bo[buf].filetype = "claude-history"
 
   -- Open in a new window
   vim.cmd("vsplit")

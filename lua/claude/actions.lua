@@ -28,14 +28,22 @@ local function extract_code_blocks(text)
   return blocks
 end
 
--- Apply code block to buffer
+-- Apply code block to buffer with error handling
 local function apply_code_block(code, target_buf)
+  if not api.nvim_buf_is_valid(target_buf) then
+    return false
+  end
+  
   -- Create temporary buffer for diff
   local temp_buf = api.nvim_create_buf(false, true)
-  api.nvim_buf_set_lines(temp_buf, 0, -1, false, vim.split(code, "\n"))
+  local ok = pcall(api.nvim_buf_set_lines, temp_buf, 0, -1, false, vim.split(code, "\n"))
+  if not ok then
+    pcall(api.nvim_buf_delete, temp_buf, { force = true })
+    return false
+  end
 
-  -- Get diff
-  local diff = vim.diff(
+  -- Get diff with error handling
+  local diff_ok, diff = pcall(vim.diff,
     table.concat(api.nvim_buf_get_lines(target_buf, 0, -1, false), "\n"),
     table.concat(api.nvim_buf_get_lines(temp_buf, 0, -1, false), "\n"),
     {
@@ -43,6 +51,11 @@ local function apply_code_block(code, target_buf)
       ctxlen = 3
     }
   )
+  
+  if not diff_ok then
+    pcall(api.nvim_buf_delete, temp_buf, { force = true })
+    return false
+  end
 
   -- Apply changes
   if diff then
@@ -59,7 +72,8 @@ local function apply_code_block(code, target_buf)
   end
 
   -- Clean up
-  api.nvim_buf_delete(temp_buf, { force = true })
+  pcall(api.nvim_buf_delete, temp_buf, { force = true })
+  return true
 end
 
 -- Apply code suggestion
@@ -77,7 +91,6 @@ function M.apply_code()
   local blocks = extract_code_blocks(content)
 
   if #blocks == 0 then
-    vim.notify("No code suggestions found", vim.log.levels.WARN)
     return
   end
 

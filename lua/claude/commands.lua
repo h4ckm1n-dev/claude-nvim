@@ -15,11 +15,7 @@ local function execute_claude_command(prompt, callback)
       else
         local error_msg = table.concat(j:stderr_result(), "\n")
         vim.schedule(function()
-          vim.notify(
-            "Claude CLI error: " .. error_msg,
-            vim.log.levels.ERROR,
-            { title = "Claude.nvim" }
-          )
+          vim.api.nvim_err_writeln("Claude CLI error: " .. error_msg)
         end)
       end
     end,
@@ -39,9 +35,9 @@ function M.handle_command(opts)
     -- Create a new buffer with the response
     local buf = vim.api.nvim_create_buf(false, true)
     vim.api.nvim_buf_set_lines(buf, 0, -1, false, vim.split(response, "\n"))
-    vim.api.nvim_buf_set_option(buf, "buftype", "nofile")
-    vim.api.nvim_buf_set_option(buf, "bufhidden", "wipe")
-    vim.api.nvim_buf_set_option(buf, "filetype", "markdown")
+    vim.bo[buf].buftype = "nofile"
+    vim.bo[buf].bufhidden = "wipe"
+    vim.bo[buf].filetype = "markdown"
 
     -- Open the buffer in a new window
     vim.cmd("vsplit")

@@ -3,5 +3,4 @@ if exists('g:loaded_claude')
 endif
 let g:loaded_claude = 1
 
-" Initialize the plugin
-lua require('claude').setup()
+" Plugin loaded - use :lua require('claude').setup() to initialize

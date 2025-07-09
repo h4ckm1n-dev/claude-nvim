@@ -51,8 +51,8 @@ function M.highlight_code(bufnr, text)
     end
 
     -- Set buffer options safely
-    pcall(vim.api.nvim_buf_set_option, temp_bufnr, 'buftype', 'nofile')
-    pcall(vim.api.nvim_buf_set_option, temp_bufnr, 'bufhidden', 'wipe')
+    pcall(vim.api.nvim_set_option_value, 'buftype', 'nofile', { buf = temp_bufnr })
+    pcall(vim.api.nvim_set_option_value, 'bufhidden', 'wipe', { buf = temp_bufnr })
 
     -- Split code into lines and clean them
     local code_lines = vim.split(block.code, "\n")
@@ -78,7 +78,7 @@ function M.highlight_code(bufnr, text)
 
     -- Set syntax if language is specified
     if block.lang and block.lang ~= "text" then
-      pcall(vim.api.nvim_buf_set_option, temp_bufnr, 'syntax', block.lang)
+      pcall(vim.api.nvim_set_option_value, 'syntax', block.lang, { buf = temp_bufnr })
       vim.cmd('redraw')
     end
 

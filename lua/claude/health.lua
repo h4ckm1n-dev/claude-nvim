@@ -21,17 +21,22 @@ function M.check()
   end
 
   -- Check for Claude CLI
-  local config = require("claude").get_config()
-  local claude_path = config.claude_path
-  local claude_exists = vim.fn.executable(claude_path) == 1
+  local claude_ok, config = pcall(require, "claude")
+  if claude_ok and config.get_config then
+    local cfg = config.get_config()
+    local claude_path = cfg.claude_path or "/opt/homebrew/bin/claude"
+    local claude_exists = vim.fn.executable(claude_path) == 1
 
-  if claude_exists then
-    health.report_ok("Claude CLI is installed")
+    if claude_exists then
+      health.report_ok("Claude CLI is installed at " .. claude_path)
+    else
+      health.report_error(string.format(
+        "Claude CLI not found at '%s'. Please install it first",
+        claude_path
+      ))
+    end
   else
-    health.report_error(string.format(
-      "Claude CLI not found at '%s'. Please install it first",
-      claude_path
-    ))
+    health.report_warn("Could not check Claude CLI (plugin not loaded)")
   end
 end
 
