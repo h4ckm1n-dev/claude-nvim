@@ -1,4 +1,4 @@
-locac> M = {}
+local M = {}
 local context = require('claude.utils.context')
 local render = require('claude.utils.render')
 local session = require('claude.utils.session')
