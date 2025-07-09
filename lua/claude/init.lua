@@ -425,7 +425,7 @@ local function send_selection()
   
   local visual_selection = context.get_visual_selection()
   if not visual_selection then
-    vim.notify("No selection found", vim.log.levels.WARN)
+    -- vim.notify("No selection found", vim.log.levels.WARN)
     logger.warn("No visual selection found")
     return
   end
@@ -452,7 +452,7 @@ local function send_buffer()
   
   local buffer_context = context.get_buffer_context()
   if not buffer_context then
-    vim.notify("No buffer content found", vim.log.levels.WARN)
+    -- vim.notify("No buffer content found", vim.log.levels.WARN)
     logger.warn("No buffer content found")
     return
   end
@@ -479,7 +479,7 @@ local function send_git_diff()
   
   local git_diff = context.get_git_context()
   if not git_diff then
-    vim.notify("No git diff found", vim.log.levels.WARN)
+    -- vim.notify("No git diff found", vim.log.levels.WARN)
     logger.warn("No git diff found")
     return
   end
@@ -526,7 +526,7 @@ local function copy_response()
   
   local buf = vim.api.nvim_get_current_buf()
   if not vim.api.nvim_buf_is_valid(buf) or vim.bo[buf].buftype ~= 'terminal' then
-    vim.notify("Not in a Claude terminal buffer", vim.log.levels.WARN)
+    -- vim.notify("Not in a Claude terminal buffer", vim.log.levels.WARN)
     logger.warn("Not in Claude terminal buffer")
     return
   end
@@ -539,7 +539,7 @@ local function copy_response()
   vim.fn.setreg('+', content)
   vim.fn.setreg('"', content)
   
-  vim.notify("Claude response copied to clipboard", vim.log.levels.INFO)
+  -- vim.notify("Claude response copied to clipboard", vim.log.levels.INFO)
   logger.info("Claude response copied to clipboard", { content_length = #content })
 end
 
@@ -633,10 +633,10 @@ local function create_commands()
   vim.api.nvim_create_user_command('ClaudeLogStats', function()
     local stats = logger.get_log_stats()
     if stats.exists then
-      vim.notify(string.format("Log file: %s (%s, modified: %s)", 
-        logger.config.file_path, stats.size_human, stats.modified))
+      -- vim.notify(string.format("Log file: %s (%s, modified: %s)", 
+        -- logger.config.file_path, stats.size_human, stats.modified))
     else
-      vim.notify("Log file doesn't exist yet")
+      -- vim.notify("Log file doesn't exist yet")
     end
   end, { desc = "Show Claude log statistics" })
 end
@@ -659,7 +659,7 @@ function M.setup(user_config)
     if used_keys[key] then
       local warning = string.format("Warning: Keymap %s is used by both %s and %s", key, used_keys[key], action)
       logger.warn(warning)
-      vim.notify(warning, vim.log.levels.WARN)
+      -- vim.notify(warning, vim.log.levels.WARN)
     end
     used_keys[key] = action
   end

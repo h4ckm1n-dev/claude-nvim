@@ -175,7 +175,10 @@ local function log(level, message, data)
     write_to_file(formatted)
   end
   
-  vim.notify(string.format("[Claude] %s: %s", level, message), vim.log.levels[level])
+  -- Only show notifications for ERROR level
+  if level == "ERROR" then
+    vim.notify(string.format("[Claude] %s: %s", level, message), vim.log.levels[level])
+  end
 end
 
 function M.debug(message, data)
